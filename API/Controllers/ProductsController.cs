@@ -51,9 +51,8 @@ public class ProductsController : BaseApiController
     }
 
     [HttpGet("{id}")]
-    // TO DO: to fix video 55
-    //[ProducesErrorResponseType(StatusCodes.Status200OK)]
-    // [ProducesErrorResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProductToReturnDto>> GetProduct(int id)
     {
         var spec = new ProductsWithTypesAndBrandsSpecification(id);
