@@ -1,11 +1,11 @@
 using API.Dtos;
 using API.Errors;
+using API.Helpers;
 using AutoMapper;
 using Core.Entities;
 using Core.Interfaces;
 using Core.Specifications;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 
 namespace API.Controllers;
 
@@ -27,13 +27,21 @@ public class ProductsController : BaseApiController
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ProductToReturnDto>>> GetProducts()
+    public async Task<ActionResult<Pagination<ProductToReturnDto>>> GetProducts(
+        [FromQuery]ProductSpecParams productParams)
     {
-        var spec = new ProductsWithTypesAndBrandsSpecification();
+        var spec = new ProductsWithTypesAndBrandsSpecification(productParams);
         
+        var countSpec = new ProductWithFiltersForCountSpecification(productParams);
+
+        var totalItems = await _productRepo.CountAsync(countSpec);
+
         var products = await _productRepo.ListAsync(spec);
+
+            // mapping using AutoMapper
+        var data = _mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToReturnDto>>(products);
         
-            // Manually mapping
+        #region Manually mapping
         // return products.Select(product => new ProductToReturnDto
         // {
         //     Id = product.Id,
@@ -44,10 +52,10 @@ public class ProductsController : BaseApiController
         //     ProductType = product.ProductType.Name,   
         //     ProductBrand = product.ProductBrand.Name
         // }).ToList();
-
-            // mapping using AutoMapper
-        return Ok(_mapper
-            .Map<IReadOnlyList<Product>, IReadOnlyList<ProductToReturnDto>>(products));
+        #endregion
+          
+        return Ok(new Pagination<ProductToReturnDto>(productParams.PageIndex,
+            productParams.PageSize, totalItems, data));
     }
 
     [HttpGet("{id}")]
@@ -61,7 +69,8 @@ public class ProductsController : BaseApiController
 
         if (product == null) return NotFound(new ApiResponse(404));
         
-           // Manually mapping
+        #region Manually mapping
+            // Manually mapping
         // return new ProductToReturnDto
         // {
         //     Id = product.Id,
@@ -72,6 +81,7 @@ public class ProductsController : BaseApiController
         //     ProductType = product.ProductType.Name,   
         //     ProductBrand = product.ProductBrand.Name
         // };
+        #endregion      
 
             // mapping using AutoMapper
         return _mapper.Map<Product, ProductToReturnDto>(product);
